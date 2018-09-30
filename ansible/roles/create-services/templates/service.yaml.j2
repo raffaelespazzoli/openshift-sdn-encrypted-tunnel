@@ -1,0 +1,22 @@
+{% if tunnel_mode == 'wireguard1' %}
+{% for node in cluster.nodes %}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ appname~"-"~node.name.split('.')[0] }}
+  namespace: {{ namespace }}  
+  labels:
+    node: {{ node.name }}
+spec:
+  type: {{ serviceType }}
+  ports:
+  - port: {{ tunnel_port }}
+    targetPort: {{ tunnel_port }}
+    protocol: UDP
+    name: {{ appname }}
+  selector:
+    app: {{ appname }}
+    node: {{ node.name }}
+{% endfor %}
+{% endif %}

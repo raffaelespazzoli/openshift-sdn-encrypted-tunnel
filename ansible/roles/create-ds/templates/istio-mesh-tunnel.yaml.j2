@@ -1,0 +1,184 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ appname }}
+  namespace: {{ namespace }}
+  labels:
+    app: {{ appname }}
+---
+apiVersion: v1
+kind: SecurityContextConstraints
+metadata:
+  annotations:
+    kubernetes.io/description: 'privileged allows access to all privileged and host
+      features and the ability to run as any user, any group, any fsGroup, and with
+      any SELinux context.  WARNING: this is the most relaxed SCC and should be
+      used only for cluster administration. Grant with caution.'
+  creationTimestamp: null
+  name: {{ appname }}
+  labels:
+  app: {{ appname }}  
+allowHostDirVolumePlugin: true
+allowHostIPC: true
+allowHostNetwork: true
+allowHostPID: true
+allowHostPorts: true
+allowPrivilegedContainer: true
+allowedCapabilities:
+- '*'
+allowedFlexVolumes: null
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+groups:
+- system:cluster-admins
+- system:nodes
+- system:masters
+priority: 8
+readOnlyRootFilesystem: false
+requiredDropCapabilities: null
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+seccompProfiles:
+- '*'
+supplementalGroups:
+  type: RunAsAny
+users:
+- system:serviceaccount:{{ namespace }}:{{ appname }}
+volumes:
+- '*'
+{% for node in cluster.nodes %}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ appname~"-"~node.name.split('.')[0] }}
+  namespace: {{ namespace }}
+  labels:
+    app: {{ appname }}
+    node: {{ node.name }}
+data:
+  wireguard.config: |-
+   [Interface]
+   ListenPort = {{ tunnel_port }} 
+   PrivateKey = {{ node.private_key }}
+    
+{% for ext_cluster in clusters %}
+{% if ext_cluster != cluster %}
+{% for ext_node in ext_cluster.nodes %}
+   [Peer]
+   PublicKey = {{ ext_node.public_key }}
+   AllowedIPs = {{ ext_node.hostsubnet }}
+{% if tunnel_mode == 'wireguard4' %}   
+   Endpoint = {{ ext_node.ip }}:{{ tunnel_port }}
+{% endif %}
+{% if tunnel_mode == 'wireguard1' %}   
+   Endpoint = {{ ext_node.public_ip }}:{{ ext_node.port }}
+{% endif %}   
+   PersistentKeepalive = 25   
+{% endfor %}
+{% endif %}
+{% endfor %} 
+    
+---        
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    app: {{ appname }}
+    node: {{ node.name }}
+  name: {{ appname~"-"~node.name.split('.')[0] }}
+  namespace: {{ namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ appname }}
+      node: {{ node.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ appname }}
+        node: {{ node.name }}
+      name: {{ appname~"-"~node.name.split('.')[0] }}
+    spec:
+      nodeSelector: 
+        kubernetes.io/hostname: {{ node.hostname }}
+      containers:
+      - env:
+        - name: NODEIP_CIDR
+          value: /etc/nodeip-cidr/ip-cidr.config
+        - name: TUNNEL_PORT
+          value: "{{ tunnel_port }}" 
+        - name: PEER_CONFIG
+          value: /etc/peers/peers.config      
+        - name: TUNNEL_DEV_NAME
+          value: sdn-tunnel  
+        - name: TUNNEL_MODE
+          value: "{{ tunnel_mode }}"
+        - name: WIREGUARD_CONFIG
+          value: /etc/wireguard_config/wireguard.config
+        - name: CLUSTER_CIDR
+          value: {{ cluster.sdn_cidr }}
+        - name: TUNNEL_CIDRs
+          value: {% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}{% if loop.index==1 %}{{ ext_cluster.sdn_cidr }}{% else %}","~{{ ext_cluster.sdn_cidr }}{% endif %}{% endfor %}                                                                                      
+        image: "{{ image }}"
+        imagePullPolicy: Always
+        name: sdn-tunnel
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: openvswitch
+          mountPath: /var/run/openvswitch
+        - name: wireguard-config
+          mountPath: /etc/wireguard_config
+        - name: peers
+          mountPath: /etc/peers
+        - name: nodeip-cidr
+          mountPath: /etc/nodeip-cidr                                                                  
+      serviceAccountName: {{ appname }}
+      hostNetwork: false
+      hostPID: true          
+      volumes: 
+      - name: openvswitch
+        hostPath: 
+          path: /var/run/openvswitch
+          type: Directory
+      - name: wireguard-config
+        configMap: 
+          name: {{ appname~"-"~node.name.split('.')[0] }}
+      - name: peers
+        configMap: 
+          name: {{ appname~"-peers" }}
+      - name: nodeip-cidr
+        configMap: 
+          name: {{ appname~"-nodeip-cidr" }}                          
+{% endfor %}
+---      
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ appname~"-nodeip-cidr" }}
+  namespace: {{ namespace }}
+  labels:
+    app: {{ appname }}
+data:
+  ip-cidr.config: |-    
+{% for ext_cluster in clusters %}
+{% if ext_cluster != cluster %}
+{% for ext_node in ext_cluster.nodes %}
+   {{ ext_node.ip }}-{{ ext_node.hostsubnet }}   
+{% endfor %}
+{% endif %}
+{% endfor %}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ appname~"-peers" }}
+  namespace: {{ namespace }}
+  labels:
+    app: {{ appname }}
+data:
