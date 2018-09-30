@@ -37,6 +37,7 @@ These instructions will help you install an encrypted tunnel between different O
 
 ### Install wireguard
 
+Wireguard needs to be installed in each of the nodes of your clusters.
 
 For each of your clusters run the following:
 
@@ -46,7 +47,7 @@ ansible nodes -i <cluster_inventory> -m shell -a "curl -Lo /etc/yum.repos.d/wire
 
 ### Run the installation playbook
 
-see an example of the inventory here ./ansible/inventory and customize for your clusters
+see an example of the inventory [here](./ansible/inventory) and customize for your clusters
 run the playbook:
 ```
 ansible-playbook -i ./ansible/inventory ./ansible/playbooks/deploy-wireguard/config.yaml
