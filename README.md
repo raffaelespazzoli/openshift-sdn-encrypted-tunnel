@@ -47,10 +47,10 @@ ansible nodes -i <cluster_inventory> -m shell -a "curl -Lo /etc/yum.repos.d/wire
 
 ### Run the installation playbook
 
-see an example of the inventory [here](./ansible/inventory) and customize for your clusters
-run the playbook:
+See an example of the inventory [here](./ansible/inventory) and customize it for your clusters.
+Run the playbook:
 ```
-ansible-playbook -i ./ansible/inventory ./ansible/playbooks/deploy-wireguard/config.yaml
+ansible-playbook -i <inventory> ./ansible/playbooks/deploy-wireguard/config.yaml
 ```
 
 

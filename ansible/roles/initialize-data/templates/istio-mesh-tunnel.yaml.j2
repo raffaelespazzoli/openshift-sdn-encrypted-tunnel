@@ -71,13 +71,8 @@ data:
 {% for ext_node in ext_cluster.nodes %}
    [Peer]
    PublicKey = {{ ext_node.public_key }}
-   AllowedIPs = {{ ext_node.hostsubnet }}
-{% if tunnel_mode == 'wireguard4' %}   
-   Endpoint = {{ ext_node.ip }}:{{ tunnel_port }}
-{% endif %}
-{% if tunnel_mode == 'wireguard1' %}   
+   AllowedIPs = {{ ext_node.hostsubnet }}   
    Endpoint = {{ ext_node.public_ip }}:{{ ext_node.port }}
-{% endif %}   
    PersistentKeepalive = 25   
 {% endfor %}
 {% endif %}

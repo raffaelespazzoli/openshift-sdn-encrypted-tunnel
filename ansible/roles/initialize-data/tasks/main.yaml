@@ -23,5 +23,38 @@
 - name: debug
   debug:
     var: clusters
+    
+- name: create cluster services
+  include_tasks: create-services.yaml
+  with_items: "{{ clusters }}"
+  loop_control:
+    loop_var: cluster
+    
+- name: add keys to cluster
+  include_tasks: add-keys.yaml
+  with_items: "{{ clusters }}"
+  loop_control:
+    loop_var: cluster
+    
+- name: debug
+  debug:
+    var: clusters 
+    
+- name: add public ips to cluster
+  include_tasks: add-ips.yaml
+  with_items: "{{ clusters }}"
+  loop_control:
+    loop_var: cluster
+  when: tunnel_mode != 'wireguard4'  
+
+- name: debug
+  debug:
+    var: clusters
+
+- name: create cluster daemonsets
+  include_tasks: create-ds.yaml
+  with_items: "{{ clusters }}"
+  loop_control:
+    loop_var: cluster                
           
          

@@ -7,8 +7,8 @@
   - role: prepare-keys
   - role: retrieve-public-ips 
   - role: create-ds
-  - role: retrieve-pods-ips
-  - role: create-cm  
+#  - role: retrieve-pods-ips
+#  - role: create-cm  
 
 
     
