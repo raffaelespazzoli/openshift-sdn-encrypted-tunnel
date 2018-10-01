@@ -48,6 +48,30 @@ ansible nodes -i <cluster_inventory> -m shell -a "curl -Lo /etc/yum.repos.d/wire
 ### Run the installation playbook
 
 See an example of the inventory [here](./ansible/inventory) and customize it for your clusters.
+Here is a minimum inventory:
+```
+clusters:
+- name: <cluster_1_name>
+  url: <cluster_1_master_api_url>
+  username: <cluster_1_username>
+  password: <cluster_1_password>  
+- name: <cluster_2_name>
+  url: <cluster2_master_api_url>
+  username: <cluster_2_username>
+  password: <cluster_2_password> 
+```
+Other optional inventory variables are:
+
+| Variable Name  | Default  | Description  |
+|:-:|:-:|:-:|
+| tunnel_mode  | wireguard  | selects the tunnel mode. Currently only `wireguard` is supported.  |
+| namespace  | sdn-tunnel  | namespace in which the sdn-tunnel objects will be created  |
+| appname  | sdn-tunnel  | name and label shared by all the created resources  |
+| tunnel_port  | 5555  | UDP port used to create the the tunnel  |
+| image  | quay.io/raffaelespazzoli/istio-mesh-extension:latest  | image used by the daemonset  |
+| serviceType | LoadBalancer | type of the service used to create the tunnel, supported values are `LoadBalancer` and `NodePort` |
+
+
 Run the playbook:
 ```
 ansible-playbook -i <inventory> ./ansible/playbooks/deploy-wireguard/config.yaml
