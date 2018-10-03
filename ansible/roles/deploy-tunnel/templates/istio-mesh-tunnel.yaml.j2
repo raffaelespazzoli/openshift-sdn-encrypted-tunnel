@@ -71,9 +71,9 @@ data:
 {% for ext_node in ext_cluster.nodes %}
    [Peer]
    PublicKey = {{ ext_node.public_key }}
-   AllowedIPs = {{ ext_node.hostsubnet }}   
+   AllowedIPs = {{ ext_node.hostsubnet }}
    Endpoint = {{ ext_node.public_ip }}:{{ ext_node.port }}
-   PersistentKeepalive = 25   
+   PersistentKeepalive = 25
 {% endfor %}
 {% endif %}
 {% endfor %} 
@@ -103,12 +103,12 @@ spec:
         kubernetes.io/hostname: {{ node.hostname }}
       containers:
       - env:
-        - name: NODEIP_CIDR
-          value: /etc/nodeip-cidr/ip-cidr.config
+        - name: ROUTE_SERVICES
+          value: "{{ route_services }}"
         - name: TUNNEL_PORT
           value: "{{ tunnel_port }}" 
-        - name: PEER_CONFIG
-          value: /etc/peers/peers.config      
+        - name: KUBE_CONFIG_DIR
+          value: /etc/kubeconfigs      
         - name: TUNNEL_DEV_NAME
           value: sdn-tunnel  
         - name: TUNNEL_MODE
@@ -118,7 +118,9 @@ spec:
         - name: CLUSTER_CIDR
           value: {{ cluster.sdn_cidr }}
         - name: TUNNEL_CIDRs
-          value: {% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}{% if loop.index==1 %}{{ ext_cluster.sdn_cidr }}{% else %},{{ ext_cluster.sdn_cidr }}{% endif %}{% endfor %}                                                                                      
+          value: {% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}{% if loop.index==1 %}{{ ext_cluster.sdn_cidr }}{% else %}","~{{ ext_cluster.sdn_cidr }}{% endif %}{% endfor %}          
+        - name: TUNNEL_SERVICE_CIDRs
+          value: {% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}{% if loop.index==1 %}{{ ext_cluster.service_cidr }}{% else %}","~{{ ext_cluster.service_cidr }}{% endif %}{% endfor %}                                                                                                                                                                                      
         image: "{{ image }}"
         imagePullPolicy: Always
         name: sdn-tunnel
@@ -129,10 +131,8 @@ spec:
           mountPath: /var/run/openvswitch
         - name: wireguard-config
           mountPath: /etc/wireguard_config
-        - name: peers
-          mountPath: /etc/peers
-        - name: nodeip-cidr
-          mountPath: /etc/nodeip-cidr                                                                  
+        - name: kubeconfigs
+          mountPath: /etc/kubeconfigs                                                                            
       serviceAccountName: {{ appname }}
       hostNetwork: false
       hostPID: true          
@@ -144,36 +144,37 @@ spec:
       - name: wireguard-config
         configMap: 
           name: {{ appname~"-"~node.name.split('.')[0] }}
-      - name: peers
+      - name: kubeconfigs
         configMap: 
-          name: {{ appname~"-peers" }}
-      - name: nodeip-cidr
-        configMap: 
-          name: {{ appname~"-nodeip-cidr" }}                          
+          name: {{ appname~"-kubeconfigs" }}                                               
 {% endfor %}
+
 ---      
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ appname~"-nodeip-cidr" }}
+  name: {{ appname~"-kubeconfigs" }}
   namespace: {{ namespace }}
   labels:
     app: {{ appname }}
 data:
-  ip-cidr.config: |-    
-{% for ext_cluster in clusters %}
-{% if ext_cluster != cluster %}
-{% for ext_node in ext_cluster.nodes %}
-   {{ ext_node.ip }}-{{ ext_node.hostsubnet }}   
-{% endfor %}
-{% endif %}
-{% endfor %}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ appname~"-peers" }}
-  namespace: {{ namespace }}
-  labels:
-    app: {{ appname }}
-data:
+{% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}
+  kubeconfig_{{ ext_cluster.name }}: |-
+    kind: Config
+    apiVersion: v1
+    users:
+    - user: "{{ service_account_name }}"
+      token: "{{ ext_cluster.token }}"
+    clusters:
+    - name: "{{ ext_cluster.name }}"
+      cluster:
+        tls-skip-verify: true
+        server: "{{ ext_cluster.url }}"
+    contexts:
+    - name: current
+      context:
+        cluster: "{{ ext_cluster.name }}"
+        namespace: "{{ namespace }}"
+        user: "{{ service_account_name }}"
+    current_context: current   
+{% endfor %}    

@@ -12,12 +12,58 @@
 # WIREGUARD_CONFIG: location of the wireguard config file
 # CLUSTER_CIDR: the cidr of the current cluster
 # TUNNEL_CIDRs: comma separated CIDRs of the remote clusters
-# PEER_CONFIG: location of the PEER_CONFIG file
-# NODEIP_CIDR: location of the node_ip-cidr config file  
+# KUBE_CONFIG: location of the PEER_CONFIG file
+# TUNNEL_SERVICE_CIDRs: comma separated services CIDRs of the remote clusters  
 
 
 set -o nounset
 set -o errexit
+
+function setupServiceProxy {
+  for file in $KUBE_CONFIG/*
+  do
+    kube-router --run-service-proxy true --run-firewall false --run-router false --kubeconfig $file &
+  done  
+}
+
+function wireOVSInOutServices {
+  echo running wireOVSInOutServices
+  # retrieve the vethdevice name
+  iflink=$(cat /sys/class/net/eth0/iflink)
+  veth=$(nsenter -t 1 -n ip link | grep "$iflink: veth" | awk '{print $2}' | cut -d '@' -f 1)
+  port=$(ovs-vsctl get Interface $veth ofport)
+  mac=$(cat /sys/class/net/eth0/address)
+  for cidr in ${TUNNEL_SERVICE_CIDRs//,/ }
+  do
+    echo cluster_cidr: $CLUSTER_CIDR , cidr: $cidr , port: $port , mac: $mac
+  # table=0, priority=300,ip,nw_src=10.128.0.0/14, nw_dst=10.132.0.0/14 actions=output:<port_of_tunnel>
+  # to modify the destination address: mod_dl_dst:mac
+    ovs-ofctl add-flow br0 "table=0,priority=300,ip,nw_src=$CLUSTER_CIDR,nw_dst=$cidr,actions=mod_dl_dst:$mac,output:$port" --protocols=OpenFlow13
+  #From remote tunnel to local network 
+  # table=0, priority=300,ip,nw_src=10.132.0.0/14, nw_dst=10.128.0.0/14 action=goto_table:30
+    ovs-ofctl add-flow br0 "table=0,priority=300,ip,in_port=$port,nw_src=$cidr,nw_dst=$CLUSTER_CIDR,action=goto_table:30" --protocols=OpenFlow13
+  done  
+}
+
+function unWreOVSInOutServices {
+  echo running unWreOVSInOutServices
+  # retrieve the vethdevice name
+  set +e
+  iflink=$(cat /sys/class/net/eth0/iflink)
+  veth=$(nsenter -t 1 -n ip link | grep "$iflink: veth" | awk '{print $2}' | cut -d '@' -f 1)
+  port=$(ovs-vsctl get Interface $veth ofport)
+  mac=$(cat /sys/class/net/eth0/address)
+  for cidr in ${TUNNEL_SERVICE_CIDRs//,/ }
+  do
+    echo cluster_cidr: $CLUSTER_CIDR , cidr: $cidr , port: $port
+  # table=0, priority=300,ip,nw_src=10.128.0.0/14, nw_dst=10.132.0.0/14 actions=output:<port_of_tunnel>
+    ovs-ofctl del-flows br0 "table=0,priority=300,ip,nw_src=$CLUSTER_CIDR,nw_dst=$cidr,actions=mod_dl_dst:$mac,output:$port" --protocols=OpenFlow13
+  #From remote tunnel to local network 
+  # table=0, priority=300,ip,nw_src=10.132.0.0/14, nw_dst=10.128.0.0/14 action=goto_table:30
+    ovs-ofctl del-flows br0 "table=0,priority=300,ip,in_port=$port,nw_src=$cidr,nw_dst=$CLUSTER_CIDR,action=goto_table:30" --protocols=OpenFlow13
+  done
+  set -e  
+  }
 
 function setupFouTunnel {
   echo running setupFouTunnel
@@ -26,8 +72,6 @@ function setupFouTunnel {
     auto encap-dport $TUNNEL_PORT
   ip addr add $TUNNEL_CIDR dev $TUNNEL_DEV_NAME
   }
-
-# wg created in node's network namespace and moved to pod's network namespace
 
 
 # wg completely in the pod's network namespace
@@ -54,10 +98,13 @@ function setup {
     wireOVSPodInOut   
   elif [ $TUNNEL_MODE = "wireguard" ] 
   then
-#    setupIPTables
     setupWg
-    wireOVSPodInOut             
-  fi   
+    wireOVSPodInOut            
+  fi
+  if [ $ROUTE_SERVICE = "True" ]
+    setupServiceProxy
+    wireOVSInOutServices
+  fi       
   }
 
 function cleanup {
@@ -68,7 +115,10 @@ function cleanup {
     unwireOVSPodInOut
   elif [ $TUNNEL_MODE = "wireguard" ] 
   then
-    unwireOVSPodInOut   
+    unwireOVSPodInOut       
+  fi
+  if [ $ROUTE_SERVICE = "True" ]
+    unWreOVSInOutServices
   fi  
   }
 
@@ -109,22 +159,6 @@ function unwireOVSPodInOut {
     ovs-ofctl del-flows br0 "table=0,priority=300,ip,in_port=$port,nw_src=$cidr,nw_dst=$CLUSTER_CIDR,action=goto_table:30" --protocols=OpenFlow13
   done
   set -e  
-  }
-
-function setupIPTables {
-
-# wait untill the config file appears
-  while [ ! -f $PEER_CONFIG ]
-  do
-    sleep 2
-  done
-  
-  lines=$(cat $PEER_CONFIG)
-  for line in $lines ; 
-  do
-    iptables -t nat -A INPUT -i eth0 -p udp --dport $TUNNEL_PORT -s ${line%-*} -j SNAT --to-source ${line#*-}:$TUNNEL_PORT
-  done  
-  
   }
 
 function cleanupAndExit {

@@ -9,7 +9,7 @@ metadata:
   labels:
     node: {{ node.name }}
 spec:
-  type: {{ serviceType }}
+  type: {{ service_type }}
   ports:
   - port: {{ tunnel_port }}
     targetPort: {{ tunnel_port }}

@@ -1,0 +1,5 @@
+---
+- name: create project
+  command: oc --context {{ cluster.context }} adm new-project {{ namespace }} --node-selector=""
+  register: oc_res
+  failed_when: oc_res.rc >= 2

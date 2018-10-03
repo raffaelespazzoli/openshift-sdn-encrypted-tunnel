@@ -2,7 +2,7 @@
 - hosts: localhost
   connection: local
   roles:
-#  - role: deploy-tunnel
+  - role: deploy-tunnel
   - role: deploy-dns
     when: enable_dns == true
 

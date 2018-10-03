@@ -1,7 +1,4 @@
-# oc get nodes -o custom-columns=NAME:metadata.name --no-headers=true
-
 ---
-# oc get nodes -o custom-columns=NAME:metadata.name --no-headers=true
 - name: login to the clusters
   include_tasks: authenticate.yaml
   with_items: "{{ clusters }}"
@@ -23,6 +20,18 @@
 - name: debug
   debug:
     var: clusters
+    
+- name: create cluster projects
+  include_tasks: create-projects.yaml
+  with_items: "{{ clusters }}"
+  loop_control:
+    loop_var: cluster
+    
+- name: create cluster service account
+  include_tasks: create-service-account.yaml
+  with_items: "{{ clusters }}"
+  loop_control:
+    loop_var: cluster        
     
 - name: create cluster services
   include_tasks: create-services.yaml
