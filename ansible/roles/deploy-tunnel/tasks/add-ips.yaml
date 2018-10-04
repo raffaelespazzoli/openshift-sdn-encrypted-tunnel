@@ -1,7 +1,19 @@
 ---
 - name: reset cluster nodes
   set_fact:
-    cluster_nodes: "{{ [] }}"    
+    cluster_nodes: "{{ [] }}"
+    
+- name: debug
+  debug:
+    var: cluster.nodes | length    
+    
+- name: make sure all the ips are provisioned
+  shell: oc --context {{ cluster.context }} get svc -n {{ namespace }} -o custom-columns=IP:status.loadBalancer.ingress[0].ip --no-headers=true | grep -v none
+  register: n_ips
+  until: (n_ips.stdout_lines | length) == (cluster.nodes | length)
+  retries: 10
+  delay: 30
+  when: serviceType == 'LoadBalancer'        
   
 - name: get ips
   include_tasks: get-ips.yaml

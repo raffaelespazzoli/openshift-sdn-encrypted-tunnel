@@ -1,4 +1,5 @@
 ---
+
 - name: get ip
   command: oc --context {{ cluster.context }} get service -n {{ namespace }} {{ appname }}-{{ node.name.split('.')[0] }} -o custom-columns=IP:status.loadBalancer.ingress[0].ip --no-headers=true
   register: ip

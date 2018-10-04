@@ -118,7 +118,7 @@ spec:
         - name: CLUSTER_CIDR
           value: {{ cluster.sdn_cidr }}
         - name: TUNNEL_CIDRs
-          value: {% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}{% if loop.index==1 %}{{ ext_cluster.sdn_cidr }}{% else %}","~{{ ext_cluster.sdn_cidr }}{% endif %}{% endfor %}                                                                                      
+          value: {% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}{% if loop.index==1 %}{{ ext_cluster.sdn_cidr }}{% else %},{{ ext_cluster.sdn_cidr }}{% endif %}{% endfor %}                                                                                      
         image: "{{ image }}"
         imagePullPolicy: Always
         name: sdn-tunnel

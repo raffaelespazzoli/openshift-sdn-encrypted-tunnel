@@ -2,5 +2,5 @@ tunnel_mode: wireguard
 namespace: sdn-tunnel
 appname: sdn-tunnel
 tunnel_port: 5555
-image: quay.io/raffaelespazzoli/istio-mesh-extension:latest
+image: quay.io/raffaelespazzoli/openshift-sdn-tunnel:latest
 serviceType: LoadBalancer 

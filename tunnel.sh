@@ -29,26 +29,12 @@ function setupFouTunnel {
 
 # wg created in node's network namespace and moved to pod's network namespace
 
-function setupWg4 {
-  echo running setupwg4
-  sysctl -w net.ipv4.ip_forward=1
-#  sysctl -w net.ipv4.conf.all.proxy_arp=1
-  nsenter -t 1 -n ip link add dev $TUNNEL_DEV_NAME type wireguard
-  nsenter -t 1 -n ip link set $TUNNEL_DEV_NAME netns $$
-  wg setconf $TUNNEL_DEV_NAME $WIREGUARD_CONFIG
-  ip link set up dev $TUNNEL_DEV_NAME
-  for cidr in ${TUNNEL_CIDRs//,/ }
-  do
-    ip route add $cidr dev $TUNNEL_DEV_NAME proto static scope global
-  done    
-}
-
 
 # wg completely in the pod's network namespace
 
-function setupWg1 {
-  echo running setupwg1
-  sysctl -w net.ipv4.ip_forward=1
+function setupWg {
+  echo running setupwg
+  #sysctl -w net.ipv4.ip_forward=1
   ip link add dev $TUNNEL_DEV_NAME type wireguard
   #ip link set $TUNNEL_DEV_NAME netns $$
   wg setconf $TUNNEL_DEV_NAME $WIREGUARD_CONFIG
@@ -66,14 +52,10 @@ function setup {
   then
     setupFouTunnel
     wireOVSPodInOut   
-  elif [ $TUNNEL_MODE = "wireguard1" ] 
+  elif [ $TUNNEL_MODE = "wireguard" ] 
   then
 #    setupIPTables
-    setupWg1
-    wireOVSPodInOut
-  elif [ $TUNNEL_MODE = "wireguard4" ] 
-  then
-    setupWg4
+    setupWg
     wireOVSPodInOut             
   fi   
   }
@@ -84,12 +66,9 @@ function cleanup {
   if [ $TUNNEL_MODE = "fou" ] 
   then
     unwireOVSPodInOut
-  elif [ $TUNNEL_MODE = "wireguard1" ] 
+  elif [ $TUNNEL_MODE = "wireguard" ] 
   then
-    unwireOVSPodInOut
-  elif [ $TUNNEL_MODE = "wireguard4" ] 
-  then
-    unwireOVSPodInOut       
+    unwireOVSPodInOut   
   fi  
   }
 

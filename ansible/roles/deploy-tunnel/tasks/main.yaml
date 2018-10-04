@@ -44,8 +44,7 @@
   include_tasks: add-ips.yaml
   with_items: "{{ clusters }}"
   loop_control:
-    loop_var: cluster
-  when: tunnel_mode != 'wireguard4'  
+    loop_var: cluster 
 
 - name: debug
   debug:
