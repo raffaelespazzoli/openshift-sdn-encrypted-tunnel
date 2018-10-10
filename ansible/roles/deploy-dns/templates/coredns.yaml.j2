@@ -1,0 +1,152 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: "{{ namespace }}"
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health
+{% for ext_cluster in clusters %}        
+        kubernetes cluster.{{ ext_cluster.name }} in-addr.arpa ip6.arpa {
+            endpoint https://{{ ext_cluster.url }}
+            upstream
+            kubeconfig /etc/clusters/kubeconfig_{{ ext_cluster.name }} {{ ext_cluster.name }}
+        }
+{% endfor %}        
+        prometheus :9153
+        proxy . /etc/resolv.conf
+        cache 30
+        loop
+        reload
+        loadbalance
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubeconfigs
+  namespace: "{{ namespace }}"
+data:
+{% for ext_cluster in clusters %}
+  kubeconfig_{{ ext_cluster.name }}: |-
+    apiVersion: v1
+    kind: Config
+    clusters:
+    - cluster:
+        certificate-authority-data: {{ ext_cluster.ca_data }}
+        server: {{ ext_cluster.url }}
+        name: {{ ext_cluster.name }}
+    contexts:
+    - context:
+        cluster: {{ ext_cluster.name }}
+        user: {{ ext_cluster.name }}
+        name: {{ ext_cluster.name }}
+    current-context: {{ ext_cluster.name }}
+    users:
+    - name: {{ ext_cluster.name }}
+        user:
+        token: {{ ext_cluster.coredns_sa_token }}   
+{% endfor %}  
+---  
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: coredns
+  namespace: "{{ namespace }}"
+labels:
+  appname: "{{ appname }}"  
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      appname: "{{ appname }}"
+  template:
+    metadata:
+      labels:
+        appname: "{{ appname }}"
+    spec:
+      serviceAccountName: coredns
+      containers:
+      - name: coredns
+        image: {{ coredns_image }}
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 170Mi
+          requests:
+            cpu: 100m
+            memory: 70Mi
+        args: [ "-conf", "/etc/coredns/Corefile" ]
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/coredns
+          readOnly: true
+        - name: kubeconfigs
+          mountPath: /etc/clusters
+          readOnly: true          
+        ports:
+        - containerPort: 53
+          name: dns
+          protocol: UDP
+        - containerPort: 53
+          name: dns-tcp
+          protocol: TCP
+        - containerPort: 9153
+          name: metrics
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_BIND_SERVICE
+            drop:
+            - all
+          readOnlyRootFilesystem: true
+      dnsPolicy: Default
+      volumes:
+        - name: config-volume
+          configMap:
+            name: coredns
+            items:
+            - key: Corefile
+              path: Corefile
+        - name: kubeconfigs
+          configMap:
+            name: kubeconfigs              
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coredns
+  namespace: "{{ namespace }}"
+  annotations:
+    prometheus.io/port: "9153"
+    prometheus.io/scrape: "true"
+  labels:
+    appname: "{{ appname }}"
+spec:
+  selector:
+    appname: "{{ appname }}"
+  ports:
+  - name: dns
+    port: 53
+    protocol: UDP
+  - name: dns-tcp
+    port: 53
+    protocol: TCP

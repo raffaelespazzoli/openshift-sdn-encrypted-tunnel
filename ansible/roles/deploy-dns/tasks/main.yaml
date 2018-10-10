@@ -1,0 +1,24 @@
+---
+- name: login to the clusters
+  include_tasks: authenticate.yaml
+  with_items: "{{ clusters }}"
+  loop_control:
+    loop_var: cluster
+    
+- name: create service accounts
+  include_tasks: create-service-accounts.yaml
+  with_items: "{{ clusters }}"
+  loop_control:
+    loop_var: cluster
+    
+- name: add service account token
+  include_tasks: add-service-account-token.yaml
+  with_items: "{{ clusters }}"
+  loop_control:
+    loop_var: cluster   
+    
+- name: deploy coredns
+  include_tasks: deploy-core-dns.yaml
+  with_items: "{{ clusters }}"
+  loop_control:
+    loop_var: cluster     

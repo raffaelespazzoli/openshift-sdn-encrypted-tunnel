@@ -1,0 +1,8 @@
+---
+- name: process coredns template
+  template:
+    src: coredns.yaml.j2
+    dest: "/tmp/{{ cluster.name }}-coredns.yaml"
+    
+- name: apply coredns template
+  command: oc --context {{ cluster.context }} apply -f /tmp/{{ cluster.name }}-coredns.yaml

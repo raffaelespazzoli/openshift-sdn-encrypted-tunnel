@@ -1,0 +1,6 @@
+FROM registry.access.redhat.com/rhel7.5
+
+ADD bin/coredns /coredns
+
+EXPOSE 53 53/udp
+ENTRYPOINT ["/coredns"]
