@@ -15,7 +15,11 @@
   include_tasks: add-service-account-token.yaml
   with_items: "{{ clusters }}"
   loop_control:
-    loop_var: cluster   
+    loop_var: cluster
+    
+- name: debug
+  debug:
+    var: clusters       
     
 - name: deploy coredns
   include_tasks: deploy-core-dns.yaml
