@@ -12,8 +12,9 @@
 # WIREGUARD_CONFIG: location of the wireguard config file
 # CLUSTER_CIDR: the cidr of the current cluster
 # TUNNEL_CIDRs: comma separated CIDRs of the remote clusters
-# KUBE_CONFIG: location of the PEER_CONFIG file
+# KUBE_CONFIG: directory of the kubeconfig files
 # TUNNEL_SERVICE_CIDRs: comma separated services CIDRs of the remote clusters  
+# ROUTE_SERVICE: boolean to set whether service routing should be setup
 
 
 set -o nounset
@@ -22,7 +23,7 @@ set -o errexit
 function setupServiceProxy {
   for file in $KUBE_CONFIG/*
   do
-    kube-router --run-service-proxy true --run-firewall false --run-router false --kubeconfig $file &
+    kube-router --run-service-proxy true --run-firewall false --run-router false --kubeconfig $file --hostname-override none &
   done  
 }
 
@@ -101,7 +102,8 @@ function setup {
     setupWg
     wireOVSPodInOut            
   fi
-  if [ $ROUTE_SERVICE = "True" ]
+  if [ $ROUTE_SERVICES = "True" ]
+  then  
     setupServiceProxy
     wireOVSInOutServices
   fi       
@@ -117,7 +119,8 @@ function cleanup {
   then
     unwireOVSPodInOut       
   fi
-  if [ $ROUTE_SERVICE = "True" ]
+  if [ $ROUTE_SERVICES = "True" ]
+  then  
     unWreOVSInOutServices
   fi  
   }

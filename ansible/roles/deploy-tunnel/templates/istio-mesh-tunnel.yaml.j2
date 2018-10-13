@@ -103,6 +103,8 @@ spec:
         kubernetes.io/hostname: {{ node.hostname }}
       containers:
       - env:
+        - name: KUBE_CONFIG
+          value: /etc/kubeconfigs
         - name: ROUTE_SERVICES
           value: "{{ route_services }}"
         - name: TUNNEL_PORT
@@ -163,18 +165,19 @@ data:
     kind: Config
     apiVersion: v1
     users:
-    - user: "{{ service_account_name }}"
-      token: "{{ ext_cluster.token }}"
+    - name: {{ service_account_name }}
+      user: 
+      token: {{ ext_cluster.token }}
     clusters:
-    - name: "{{ ext_cluster.name }}"
+    - name: {{ ext_cluster.name }}
       cluster:
         tls-skip-verify: true
-        server: "{{ ext_cluster.url }}"
+        server: {{ ext_cluster.url }}
     contexts:
     - name: current
       context:
-        cluster: "{{ ext_cluster.name }}"
-        namespace: "{{ namespace }}"
-        user: "{{ service_account_name }}"
+        cluster: {{ ext_cluster.name }}
+        namespace: {{ namespace }}
+        user: {{ service_account_name }}
     current_context: current   
 {% endfor %}    

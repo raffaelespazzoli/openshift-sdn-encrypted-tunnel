@@ -6,7 +6,7 @@ ENV GOPATH=/opt/app-root/go \
 
 USER root
     
-RUN INSTALL_PKGS="golang git iproute wireguard-tools psmisc tcpdump nmap-ncat wget openssl-devel openssl python-six python-sphinx gcc make python-devel openssl-devel kernel-devel graphviz kernel-debug-devel autoconf automake rpm-build redhat-rpm-config libtool python-twisted-core python-zope-interface PyQt4 desktop-file-utils libcap-ng-devel groff checkpolicy selinux-policy-devel" && \
+RUN INSTALL_PKGS="golang git iproute wireguard-tools psmisc tcpdump nmap-ncat wget openssl-devel openssl python-six python-sphinx gcc make python-devel openssl-devel kernel-devel graphviz kernel-debug-devel autoconf automake rpm-build redhat-rpm-config libtool python-twisted-core python-zope-interface PyQt4 desktop-file-utils libcap-ng-devel groff checkpolicy selinux-policy-devel ipvsadm" && \
     curl -Lo /etc/yum.repos.d/wireguard.repo https://copr.fedorainfracloud.org/coprs/jdoss/wireguard/repo/epel-7/jdoss-wireguard-epel-7.repo && \
     curl -Lo ./epel-release-latest-7.noarch.rpm https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && \ 
     yum install -y ./epel-release-latest-7.noarch.rpm && \
@@ -30,7 +30,7 @@ RUN INSTALL_PKGS="golang git iproute wireguard-tools psmisc tcpdump nmap-ncat wg
     git checkout v0.2.0 && \
     dep ensure -vendor-only && \
     go build -o kube-router cmd/kube-router/kube-router.go && \
-    cp ./kube-router /root && \
+    cp ./kube-router /usr/bin/kube-router && \
     cd /root && \
     rm -rf ${GOPATH}    
     

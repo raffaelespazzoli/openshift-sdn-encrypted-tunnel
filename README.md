@@ -81,5 +81,52 @@ Run the playbook:
 ansible-playbook -i <inventory> ./ansible/playbooks/deploy-wireguard/config.yaml
 ```
 
+# Test
 
+We are going to create two podsin two different cluster and test the connectivity.
 
+Login to the cluster and save the context in a variable:
+```
+oc login --username=<user1> --password=<pwd1> <url1>
+CLUSTER1=$(oc config current-context)
+oc login --username=<user2> --password=<pwd2> <url2>
+CLUSTER2=$(oc config current-context)
+```
+
+create a project and a pod:
+```
+oc --context=$CLUSTER1 new-project test-sdn-tunnel
+oc --context=$CLUSTER2 new-project test-sdn-tunnel
+oc --context=$CLUSTER1 new-app -n test-sdn-tunnel --name httpd registry.access.redhat.com/rhscl/httpd-24-rhel7~https://github.com/openshift/httpd-ex.git
+oc --context=$CLUSTER2 new-app -n test-sdn-tunnel --name httpd registry.access.redhat.com/rhscl/httpd-24-rhel7~https://github.com/openshift/httpd-ex.git
+```
+after a while the pod will be up and running
+collect the info needed for the test
+```
+POD1=$(oc --context $CLUSTER1 get pod -n test-sdn-tunnel | grep Running | awk '{print $1}')
+POD2=$(oc --context $CLUSTER2 get pod -n test-sdn-tunnel | grep Running | awk '{print $1}')
+POD1_IP=$(oc --context $CLUSTER1 get pod $POD1 -n test-sdn-tunnel -o jsonpath='{.status.podIP}')
+POD2_IP=$(oc --context $CLUSTER2 get pod $POD2 -n test-sdn-tunnel -o jsonpath='{.status.podIP}')
+SVC1_IP=$(oc --context $CLUSTER1 get svc -n test-sdn-tunnel | grep httpd | awk '{print $3}')
+SVC2_IP=$(oc --context $CLUSTER2 get svc -n test-sdn-tunnel | grep httpd | awk '{print $3}')
+```
+Let's test simple ip to ip connectivity
+```
+oc --context $CLUSTER1 exec $POD1 -n test-sdn-tunnel -- curl http://$POD2_IP:8080
+```
+
+Let's test connectivity via the service
+```
+oc --context $CLUSTER1 exec $POD1 -n test-sdn-tunnel -- curl http://$SVC2_IP:8080
+```
+To test connectivity via name resolution we need to inform the pod on how to resolve the names
+```
+DNS_IP=$(oc --context $CLUSTER1 get svc -n sdn-tunnel | grep coredns | awk '{print $3}')
+oc --context $CLUSTER1 patch dc httpd -n test-sdn-tunnel -p '{"spec":{"template":{"spec":{"dnsConfig":{"nameservers":["'$DNS_IP'"]}}}}}'
+POD1=$(oc --context $CLUSTER1 get pod -n test-sdn-tunnel | grep Running | awk '{print $1}')
+```
+this will cause the pod to be redeployed, once the pod is up we can test name resolution:
+```
+CLUSTER_NAME=<add the name for the cluster that you used in the inventory file>
+oc --context $CLUSTER1 exec $POD1 -n test-sdn-tunnel -- curl http://httpd.test-sdn-tunnel.svc.cluster.$CLUSTER_NAME:8080
+```
