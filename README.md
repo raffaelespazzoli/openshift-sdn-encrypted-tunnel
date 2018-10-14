@@ -122,7 +122,7 @@ oc --context $CLUSTER1 exec $POD1 -n test-sdn-tunnel -- curl http://$SVC2_IP:808
 To test connectivity via name resolution we need to inform the pod on how to resolve the names
 ```
 DNS_IP=$(oc --context $CLUSTER1 get svc -n sdn-tunnel | grep coredns | awk '{print $3}')
-oc --context $CLUSTER1 patch dc httpd -n test-sdn-tunnel -p '{"spec":{"template":{"spec":{"dnsConfig":{"nameservers":["'$DNS_IP'"]}}}}}'
+oc --context $CLUSTER1 patch dc httpd -n test-sdn-tunnel -p '{"spec":{"template":{"spec":{"dnsPolicy": "None", "dnsConfig":{"nameservers":["'$DNS_IP'"], "searches":["svc.cluster.local","cluster.local"]}}}}}'
 POD1=$(oc --context $CLUSTER1 get pod -n test-sdn-tunnel | grep Running | awk '{print $1}')
 ```
 this will cause the pod to be redeployed, once the pod is up we can test name resolution:

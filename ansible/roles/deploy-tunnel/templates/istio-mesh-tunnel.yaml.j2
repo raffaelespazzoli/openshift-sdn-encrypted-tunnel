@@ -131,6 +131,8 @@ spec:
         volumeMounts:
         - name: openvswitch
           mountPath: /var/run/openvswitch
+        - name: modules
+          mountPath: /lib/modules          
         - name: wireguard-config
           mountPath: /etc/wireguard_config
         - name: kubeconfigs
@@ -143,6 +145,10 @@ spec:
         hostPath: 
           path: /var/run/openvswitch
           type: Directory
+      - name: modules
+        hostPath: 
+          path: /lib/modules
+          type: Directory          
       - name: wireguard-config
         configMap: 
           name: {{ appname~"-"~node.name.split('.')[0] }}
