@@ -109,24 +109,34 @@ POD1_IP=$(oc --context $CLUSTER1 get pod $POD1 -n test-sdn-tunnel -o jsonpath='{
 POD2_IP=$(oc --context $CLUSTER2 get pod $POD2 -n test-sdn-tunnel -o jsonpath='{.status.podIP}')
 SVC1_IP=$(oc --context $CLUSTER1 get svc -n test-sdn-tunnel | grep httpd | awk '{print $3}')
 SVC2_IP=$(oc --context $CLUSTER2 get svc -n test-sdn-tunnel | grep httpd | awk '{print $3}')
+DNS1_IP=$(oc --context $CLUSTER1 get svc -n sdn-tunnel | grep coredns | awk '{print $3}')
+DNS2_IP=$(oc --context $CLUSTER2 get svc -n sdn-tunnel | grep coredns | awk '{print $3}')
 ```
 Let's test simple ip to ip connectivity
 ```
 oc --context $CLUSTER1 exec $POD1 -n test-sdn-tunnel -- curl http://$POD2_IP:8080
+oc --context $CLUSTER2 exec $POD2 -n test-sdn-tunnel -- curl http://$POD1_IP:8080
 ```
 
 Let's test connectivity via the service
 ```
 oc --context $CLUSTER1 exec $POD1 -n test-sdn-tunnel -- curl http://$SVC2_IP:8080
+oc --context $CLUSTER2 exec $POD2 -n test-sdn-tunnel -- curl http://$SVC1_IP:8080
 ```
 To test connectivity via name resolution we need to inform the pod on how to resolve the names
 ```
-DNS_IP=$(oc --context $CLUSTER1 get svc -n sdn-tunnel | grep coredns | awk '{print $3}')
-oc --context $CLUSTER1 patch dc httpd -n test-sdn-tunnel -p '{"spec":{"template":{"spec":{"dnsPolicy": "None", "dnsConfig":{"nameservers":["'$DNS_IP'"], "searches":["svc.cluster.local","cluster.local"]}}}}}'
+oc --context $CLUSTER1 patch dc httpd -n test-sdn-tunnel -p '{"spec":{"template":{"spec":{"dnsPolicy": "None", "dnsConfig":{"nameservers":["'$DNS1_IP'"], "searches":["svc.cluster.local","cluster.local"]}}}}}'
+oc --context $CLUSTER2 patch dc httpd -n test-sdn-tunnel -p '{"spec":{"template":{"spec":{"dnsPolicy": "None", "dnsConfig":{"nameservers":["'$DNS2_IP'"], "searches":["svc.cluster.local","cluster.local"]}}}}}'
+```
+this will cause the pod to be redeployed, so we need to capture the new IP:
+```
 POD1=$(oc --context $CLUSTER1 get pod -n test-sdn-tunnel | grep Running | awk '{print $1}')
+POD2=$(oc --context $CLUSTER2 get pod -n test-sdn-tunnel | grep Running | awk '{print $1}')
 ```
-this will cause the pod to be redeployed, once the pod is up we can test name resolution:
+now we can test service discovery and connectivity using the service name
 ```
-CLUSTER_NAME=<add the name for the cluster that you used in the inventory file>
-oc --context $CLUSTER1 exec $POD1 -n test-sdn-tunnel -- curl http://httpd.test-sdn-tunnel.svc.cluster.$CLUSTER_NAME:8080
+CLUSTER1_NAME=<add the name for the cluster that you used in the inventory file>
+CLUSTER2_NAME=<add the name for the cluster that you used in the inventory file>
+oc --context $CLUSTER1 exec $POD1 -n test-sdn-tunnel -- curl http://httpd.test-sdn-tunnel.svc.cluster.$CLUSTER2_NAME:8080
+oc --context $CLUSTER2 exec $POD2 -n test-sdn-tunnel -- curl http://httpd.test-sdn-tunnel.svc.cluster.$CLUSTER1_NAME:8080
 ```

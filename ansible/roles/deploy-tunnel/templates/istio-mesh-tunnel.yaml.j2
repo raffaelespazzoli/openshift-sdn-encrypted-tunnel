@@ -103,6 +103,14 @@ spec:
         kubernetes.io/hostname: {{ node.hostname }}
       containers:
       - env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP  
         - name: KUBE_CONFIG
           value: /etc/kubeconfigs
         - name: ROUTE_SERVICES
@@ -173,17 +181,17 @@ data:
     users:
     - name: {{ service_account_name }}
       user: 
-      token: {{ ext_cluster.token }}
+        token: {{ ext_cluster.token }}
     clusters:
     - name: {{ ext_cluster.name }}
       cluster:
-        tls-skip-verify: true
-        server: {{ ext_cluster.url }}
+        certificate-authority-data: {{ ext_cluster.ca_data }}
+        server: https://{{ ext_cluster.url }}
     contexts:
     - name: current
       context:
         cluster: {{ ext_cluster.name }}
         namespace: {{ namespace }}
         user: {{ service_account_name }}
-    current_context: current   
+    current-context: current   
 {% endfor %}    

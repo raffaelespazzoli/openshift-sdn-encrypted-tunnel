@@ -2,35 +2,37 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: coredns
+  name: coredns-config
   namespace: {{ namespace }}
 data:
-  Corefile: |
-    .:53 {
-        errors
-        health
+  Corefile: |-
+    # Corefile
 {% for ext_cluster in clusters %}        
-    cluster.{{ ext_cluster.name }} {
+    cluster.{{ ext_cluster.name }}:53 {
         kubernetai cluster.{{ ext_cluster.name }} {
             kubeconfig /etc/clusters/kubeconfig_{{ ext_cluster.name }} {{ ext_cluster.name }}
         }
-    }
-{% endfor %}
-    . {
-        forward . /etc/resolv.conf
-        log
-    }        
+        errors
         prometheus :9153
+        log
         cache 30
         loop
-        reload
+    }
+{% endfor %}
+    .:53 {
+        forward . /etc/resolv.conf        
+        health
+        errors
+        prometheus :9153
         log
+        cache 30
+        loop
     }
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kubeconfigs
+  name: coredns-kubeconfigs
   namespace: {{ namespace }}
 data:
 {% for ext_cluster in clusters %}
@@ -91,7 +93,7 @@ spec:
         - name: config-volume
           mountPath: /etc/coredns
           readOnly: true
-        - name: kubeconfigs
+        - name: kubeconfigs-volume
           mountPath: /etc/clusters
           readOnly: true          
         ports:
@@ -125,13 +127,13 @@ spec:
       volumes:
         - name: config-volume
           configMap:
-            name: coredns
+            name: coredns-config
             items:
             - key: Corefile
               path: Corefile
-        - name: kubeconfigs
+        - name: kubeconfigs-volume
           configMap:
-            name: kubeconfigs              
+            name: coredns-kubeconfigs              
 ---
 apiVersion: v1
 kind: Service

@@ -23,7 +23,7 @@ set -o errexit
 function setupServiceProxy {
   for file in $KUBE_CONFIG/*
   do
-    kube-router --run-service-proxy true --run-firewall false --run-router false --kubeconfig $file --hostname-override none &
+    kube-router --run-service-proxy=true --run-firewall=false --run-router=false --kubeconfig=$file --standalone=true --standalone-iface=eth0 --standalone-hostname=$POD_NAME --standalone-ip=$POD_IP &
   done  
 }
 

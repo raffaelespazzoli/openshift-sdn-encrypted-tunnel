@@ -25,11 +25,11 @@ RUN INSTALL_PKGS="golang git iproute wireguard-tools psmisc tcpdump nmap-ncat wg
     cd $GOPATH/src && \
     mkdir -p github.com/cloudnativelabs && \
     cd github.com/cloudnativelabs && \
-    git clone https://github.com/cloudnativelabs/kube-router && \
+    git clone https://github.com/raffaelespazzoli/kube-router && \
     cd kube-router && \
-    git checkout v0.2.0 && \
+    git checkout standalone && \
     dep ensure -vendor-only && \
-    go build -o kube-router cmd/kube-router/kube-router.go && \
+    go build -o kube-router cmd/kube-router/kube-router.go  && \
     cp ./kube-router /usr/bin/kube-router && \
     cd /root && \
     rm -rf ${GOPATH}    
