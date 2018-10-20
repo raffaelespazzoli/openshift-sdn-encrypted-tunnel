@@ -103,35 +103,19 @@ spec:
         kubernetes.io/hostname: {{ node.hostname }}
       containers:
       - env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP  
-        - name: KUBE_CONFIG
-          value: /etc/kubeconfigs
-        - name: ROUTE_SERVICES
-          value: "{{ route_services }}"
         - name: TUNNEL_PORT
-          value: "{{ tunnel_port }}" 
-        - name: KUBE_CONFIG_DIR
-          value: /etc/kubeconfigs      
+          value: "{{ tunnel_port }}"      
         - name: TUNNEL_DEV_NAME
           value: sdn-tunnel  
         - name: TUNNEL_MODE
-          value: "{{ tunnel_mode }}"
+          value: {{ tunnel_mode }}
         - name: WIREGUARD_CONFIG
           value: /etc/wireguard_config/wireguard.config
         - name: CLUSTER_CIDR
-          value: {{ cluster.sdn_cidr }}
+          value: "{{ cluster.sdn_cidr }}"
         - name: TUNNEL_CIDRs
           value: {% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}{% if loop.index==1 %}{{ ext_cluster.sdn_cidr }}{% else %}","~{{ ext_cluster.sdn_cidr }}{% endif %}{% endfor %}          
-        - name: TUNNEL_SERVICE_CIDRs
-          value: {% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}{% if loop.index==1 %}{{ ext_cluster.service_cidr }}{% else %}","~{{ ext_cluster.service_cidr }}{% endif %}{% endfor %}                                                                                                                                                                                      
-        image: "{{ image }}"
+        image: {{ image_sdn_tunnel }}
         imagePullPolicy: Always
         name: sdn-tunnel
         securityContext:
@@ -143,8 +127,35 @@ spec:
           mountPath: /lib/modules          
         - name: wireguard-config
           mountPath: /etc/wireguard_config
+      - env:
+        - name: LOG_LEVEL
+          value: "{{ log_level }}" 
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP  
+        - name: KUBE_CONFIG
+          value: /etc/kubeconfigs
+        - name: CLUSTER_CIDR
+          value: "{{ cluster.sdn_cidr }}"
+        - name: TUNNEL_SERVICE_CIDRs
+          value: {% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}{% if loop.index==1 %}{{ ext_cluster.service_cidr }}{% else %}","~{{ ext_cluster.service_cidr }}{% endif %}{% endfor %}                                                                                                                                                                                      
+        image: {{ image_kube_router }}
+        imagePullPolicy: Always
+        name: service-proxy
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: openvswitch
+          mountPath: /var/run/openvswitch
+        - name: modules
+          mountPath: /lib/modules
         - name: kubeconfigs
-          mountPath: /etc/kubeconfigs                                                                            
+          mountPath: /etc/kubeconfigs                                                                                      
       serviceAccountName: {{ appname }}
       hostNetwork: false
       hostPID: true          

@@ -16,6 +16,7 @@ RUN yum repolist > /dev/null && \
     cd github.com/coredns && \
     git clone https://github.com/coredns/coredns && \
     cd coredns && \
+    git checkout v1.2.4 && \
     make dep-ensure && \
     echo kubernetai:github.com/coredns/kubernetai/plugin/kubernetai >> plugin.cfg && \
     make gen && \

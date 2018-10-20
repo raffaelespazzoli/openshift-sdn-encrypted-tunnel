@@ -1,0 +1,29 @@
+FROM quay.io/raffaelespazzoli/openshift-sdn-tunnel:kube-router
+
+ENV GOPATH=/opt/app-root/go \
+    GOBIN=/opt/app-root/go/bin \
+    PATH=$PATH:/opt/app-root/go/bin 
+
+USER root
+    
+RUN INSTALL_PKGS="golang" && \
+    dnf install -y ${INSTALL_PKGS} && \
+    mkdir -p ${GOPATH}/{bin,src} && \
+    curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh && \
+    cd $GOPATH/src && \
+    mkdir -p github.com/cloudnativelabs && \
+    cd github.com/cloudnativelabs && \
+    git clone https://github.com/raffaelespazzoli/kube-router && \
+    cd kube-router && \
+    git checkout standalone && \
+    dep ensure -vendor-only && \
+    go build -o kube-router cmd/kube-router/kube-router.go  && \
+    cp ./kube-router /usr/bin/kube-router && \
+    cd /root && \
+    rm -rf ${GOPATH} && \  
+    dnf clean all && \
+    rm  -rf /var/cache/yum          
+
+ADD service-proxy.sh /service-proxy.sh
+
+ENTRYPOINT ["/service-proxy.sh"]    
