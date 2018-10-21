@@ -22,7 +22,7 @@ RUN INSTALL_PKGS="golang" && \
     cd /root && \
     rm -rf ${GOPATH} && \  
     dnf clean all && \
-    rm  -rf /var/cache/yum          
+    rm  -rf  /var/cache/yum          
 
 ADD service-proxy.sh /service-proxy.sh
 

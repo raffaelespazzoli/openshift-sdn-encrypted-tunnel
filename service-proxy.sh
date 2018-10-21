@@ -3,19 +3,21 @@
 #### this script uses the following environment variables
 
 # CLUSTER_CIDR: the cidr of the current cluster
-# TUNNEL_SERVICE_CIDRs: comma separated services CIDRs of the remote clusters 
-# KUBE_CONFIG: directory of the kubeconfig files
+# TUNNEL_SERVICE_CIDRs: comma-separated services CIDRs of the remote clusters 
+# SERVICE_CIDR_KUBECONFIGs: comma-separated pairs of serivce cidr and file containing the kubeconfig for that cidr. each pair is separated by '-'
 # POD_IP
 # POD_NAME
-# LOG_LEVEL
+# LOG_LEVEL: 0 to 10
 
 set -o nounset
 set -o errexit
 
 function setupServiceProxy {
-  for file in $KUBE_CONFIG/*
+  echo $SERVICE_CIDR_KUBECONFIGs
+  for pair in ${SERVICE_CIDR_KUBECONFIGs//,/ }
   do
-    kube-router --run-service-proxy=true --run-firewall=false --run-router=false --kubeconfig=$file --standalone=true --standalone-iface=eth0 --standalone-hostname=$POD_NAME --standalone-ip=$POD_IP --v $LOG_LEVEL &
+    echo 'preparing kuberouter for' kubeconfig: ${pair#*-} and cidr: ${pair%-*} 
+    kube-router --run-service-proxy=true --run-firewall=false --run-router=false --kubeconfig=${pair#*-} --standalone=true --standalone-iface=eth0 --standalone-hostname=$POD_NAME --standalone-ip=$POD_IP --v $LOG_LEVEL --service-cidr=${pair%-*} &
   done  
 }
 

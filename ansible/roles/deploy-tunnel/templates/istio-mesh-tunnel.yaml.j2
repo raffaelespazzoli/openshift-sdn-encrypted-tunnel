@@ -138,10 +138,11 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP  
-        - name: KUBE_CONFIG
-          value: /etc/kubeconfigs
+        - name: SERVICE_CIDR_KUBECONFIGs
+          value: {% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}{% if loop.index==1 %}{{ ext_cluster.service_cidr }}-/etc/kubeconfigs/kubeconfig_{{ ext_cluster.name }}{% else %},{{ ext_cluster.service_cidr }}-/etc/kubeconfigs/kubeconfig_{{ ext_cluster.name }}{% endif %}{% endfor %}
+          
         - name: CLUSTER_CIDR
-          value: "{{ cluster.sdn_cidr }}"
+          value: {{ cluster.sdn_cidr }}
         - name: TUNNEL_SERVICE_CIDRs
           value: {% for ext_cluster in clusters | rejectattr('name', 'match', cluster.name) %}{% if loop.index==1 %}{{ ext_cluster.service_cidr }}{% else %}","~{{ ext_cluster.service_cidr }}{% endif %}{% endfor %}                                                                                                                                                                                      
         image: {{ image_kube_router }}

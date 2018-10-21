@@ -97,8 +97,8 @@ create a project and a pod:
 ```
 oc --context=$CLUSTER1 new-project test-sdn-tunnel
 oc --context=$CLUSTER2 new-project test-sdn-tunnel
-oc --context=$CLUSTER1 new-app -n test-sdn-tunnel --name httpd registry.access.redhat.com/rhscl/httpd-24-rhel7~https://github.com/openshift/httpd-ex.git
-oc --context=$CLUSTER2 new-app -n test-sdn-tunnel --name httpd registry.access.redhat.com/rhscl/httpd-24-rhel7~https://github.com/openshift/httpd-ex.git
+oc --context=$CLUSTER1 apply -n test-sdn-tunnel -f ./samples/test-app.yaml
+oc --context=$CLUSTER2 apply -n test-sdn-tunnel -f ./samples/test-app.yaml
 ```
 after a while the pod will be up and running
 collect the info needed for the test
@@ -125,8 +125,8 @@ oc --context $CLUSTER2 exec $POD2 -n test-sdn-tunnel -- curl http://$SVC1_IP:808
 ```
 To test connectivity via name resolution we need to inform the pod on how to resolve the names
 ```
-oc --context $CLUSTER1 patch dc httpd -n test-sdn-tunnel -p '{"spec":{"template":{"spec":{"dnsPolicy": "None", "dnsConfig":{"nameservers":["'$DNS1_IP'"], "searches":["svc.cluster.local","cluster.local"]}}}}}'
-oc --context $CLUSTER2 patch dc httpd -n test-sdn-tunnel -p '{"spec":{"template":{"spec":{"dnsPolicy": "None", "dnsConfig":{"nameservers":["'$DNS2_IP'"], "searches":["svc.cluster.local","cluster.local"]}}}}}'
+oc --context $CLUSTER1 patch deployment httpd -n test-sdn-tunnel -p '{"spec":{"template":{"spec":{"dnsPolicy": "None", "dnsConfig":{"nameservers":["'$DNS1_IP'"], "searches":["svc.cluster.local","cluster.local"]}}}}}'
+oc --context $CLUSTER2 patch deployment httpd -n test-sdn-tunnel -p '{"spec":{"template":{"spec":{"dnsPolicy": "None", "dnsConfig":{"nameservers":["'$DNS2_IP'"], "searches":["svc.cluster.local","cluster.local"]}}}}}'
 ```
 this will cause the pod to be redeployed, so we need to capture the new IP:
 ```
