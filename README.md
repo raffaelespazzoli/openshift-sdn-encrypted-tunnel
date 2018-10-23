@@ -103,6 +103,8 @@ oc --context=$CLUSTER2 apply -n test-sdn-tunnel -f ./samples/test-app.yaml
 after a while the pod will be up and running
 collect the info needed for the test
 ```
+CLUSTER1_NAME=<add the name for the cluster that you used in the inventory file>
+CLUSTER2_NAME=<add the name for the cluster that you used in the inventory file>
 POD1=$(oc --context $CLUSTER1 get pod -n test-sdn-tunnel | grep Running | awk '{print $1}')
 POD2=$(oc --context $CLUSTER2 get pod -n test-sdn-tunnel | grep Running | awk '{print $1}')
 POD1_IP=$(oc --context $CLUSTER1 get pod $POD1 -n test-sdn-tunnel -o jsonpath='{.status.podIP}')
@@ -135,8 +137,6 @@ POD2=$(oc --context $CLUSTER2 get pod -n test-sdn-tunnel | grep Running | awk '{
 ```
 now we can test service discovery and connectivity using the service name
 ```
-CLUSTER1_NAME=<add the name for the cluster that you used in the inventory file>
-CLUSTER2_NAME=<add the name for the cluster that you used in the inventory file>
 oc --context $CLUSTER1 exec $POD1 -n test-sdn-tunnel -- curl http://httpd.test-sdn-tunnel.svc.cluster.$CLUSTER2_NAME:8080
 oc --context $CLUSTER2 exec $POD2 -n test-sdn-tunnel -- curl http://httpd.test-sdn-tunnel.svc.cluster.$CLUSTER1_NAME:8080
 ```

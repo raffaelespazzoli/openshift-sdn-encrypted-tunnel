@@ -14,10 +14,12 @@ set -o errexit
 
 function setupServiceProxy {
   echo $SERVICE_CIDR_KUBECONFIGs
+  port=20244
   for pair in ${SERVICE_CIDR_KUBECONFIGs//,/ }
   do
     echo 'preparing kuberouter for' kubeconfig: ${pair#*-} and cidr: ${pair%-*} 
-    kube-router --run-service-proxy=true --run-firewall=false --run-router=false --kubeconfig=${pair#*-} --standalone=true --standalone-iface=eth0 --standalone-hostname=$POD_NAME --standalone-ip=$POD_IP --v $LOG_LEVEL --service-cidr=${pair%-*} &
+    kube-router --run-service-proxy=true --run-firewall=false --run-router=false --kubeconfig=${pair#*-} --standalone=true --standalone-iface=eth0 --standalone-hostname=$POD_NAME --standalone-ip=$POD_IP --v $LOG_LEVEL --service-cidr=${pair%-*}  --health-port=$port &
+    port=$(($port+1))
   done  
 }
 

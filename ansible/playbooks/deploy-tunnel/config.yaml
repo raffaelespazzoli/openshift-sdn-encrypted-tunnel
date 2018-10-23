@@ -4,7 +4,6 @@
   roles:
   - role: deploy-tunnel
   - role: deploy-dns
-    when: enable_dns == true
 
 
     
