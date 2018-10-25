@@ -35,14 +35,14 @@ The routing of the packets works as described in this diagram:
 
 Service Proxying is the ability to load balance connection to Kubernetes services to pods. 
 In this case we want to be able to load abalnce conenction to a service of a connected Kubernetes cluster to the pods of this cluster.
-To do so we use [kube-router](https://www.kube-router.io/), the architecture is the following:
+To do so we use IPVS managed by [kube-router](https://www.kube-router.io/), the architecture is the following:
 
 ![service-proxying](./media/service-proxying.png) 
 
 ## Discovery
 
 Discovery is the ability to discover Kuberneets service IPs by quering a DNS.
-We define the convention that each cluster has a domain of this pattern `.cluster.<cluster-name>` besides the usual `cluster.local`.
+We define the convention that each cluster has a domain of this pattern `.cluster.<cluster-name>`, besides the usual `.cluster.local`.
 We use [coredns](https://coredns.io/) to setup a DNS server with the followign architecture:
 
 ![coredns](./media/coredns.png)
@@ -171,7 +171,7 @@ oc --context $CLUSTER1 patch deployment httpd -n test-sdn-tunnel -p '{"spec":{"t
 oc --context $CLUSTER2 patch deployment httpd -n test-sdn-tunnel -p '{"spec":{"template":{"spec":{"dnsPolicy": "None", "dnsConfig":{"nameservers":["'$DNS2_IP'"], "searches":["svc.cluster.local","cluster.local"]}}}}}'
 ```
 
-This will cause the pod to be redeployed, so we need to capture the new IP:
+This will cause the pod to be redeployed, so we need to capture the new IPs:
 
 ```
 POD1=$(oc --context $CLUSTER1 get pod -n test-sdn-tunnel | grep Running | awk '{print $1}')
