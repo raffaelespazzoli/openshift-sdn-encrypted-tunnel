@@ -3,7 +3,7 @@ namespace: sdn-tunnel
 appname: sdn-tunnel
 service_account_name: sdn-tunnel
 tunnel_port: 5555
-image_sdn_tunnel: quay.io/raffaelespazzoli/openshift-sdn-tunnel:kube-router
+image_sdn_tunnel: quay.io/raffaelespazzoli/openshift-sdn-tunnel:latest
 image_kube_router: quay.io/raffaelespazzoli/kube-router:latest
 service_type: LoadBalancer
 log_level: 0
