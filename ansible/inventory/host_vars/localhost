@@ -1,5 +1,5 @@
 # LoadBalancer or NodePort
-serviceType: NodePort 
+service_type: NodePort 
 clusters:
 - name: raffa1
   url: console.raffa1.casl-contrib.osp.rht-labs.com:8443
