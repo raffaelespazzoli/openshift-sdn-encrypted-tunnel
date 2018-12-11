@@ -12,7 +12,7 @@
     
 - name: create node struct
   set_fact:
-    node_struct: "{{ dict({'private_key': priv_key, 'public_key': publ_key}) | combine(node) }}"      
+    node_struct: "{{ {'private_key': priv_key, 'public_key': publ_key} | combine(node) }}"      
      
 - name: add node struct
   set_fact:

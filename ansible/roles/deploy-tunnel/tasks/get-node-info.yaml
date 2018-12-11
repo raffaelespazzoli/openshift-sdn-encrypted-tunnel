@@ -9,7 +9,7 @@
    
 - name: create node struct
   set_fact:
-    node_struct: "{{ dict({'name': node, 'hostsubnet': hostsubnet.stdout, 'hostname': node, 'ip': ip.stdout}) }}"  
+    node_struct: "{{ {'name': node, 'hostsubnet': hostsubnet.stdout, 'hostname': node, 'ip': ip.stdout} }}"  
     
 - name: add node struct
   set_fact:
